@@ -14,6 +14,10 @@ Anqi Cui et. al., Emotion Tokens: Bridging the Gap among Multilingual Twitter Se
 
 ##### Week 3
 
+Peter Norvig, English Letter Frequency Counts [http://norvig.com/mayzner.html]
+
+
+##### Other
 Donna Harman, How Effective Is Suffixing? [http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=71B06DD5BD620B39C2EE99563E127823?doi=10.1.1.104.9828&rep=rep1&type=pdf]
 
 
@@ -35,6 +39,7 @@ Kavita Ganesan, All About Stop Words for Text Mining and Information Retrieval [
 
 Steven Loria, Tutorial: Finding Important Words In Text Using TF-IDF [http://stevenloria.com/finding-important-words-in-a-document-using-tf-idf/]
 
+##### Other
 Christopher D. Manning et. al., Stemming and Lemmatization (from Introduction to Information Retrieval) [http://nlp.stanford.edu/IR-book/html/htmledition/stemming-and-lemmatization-1.html]
 
 
