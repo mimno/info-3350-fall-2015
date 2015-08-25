@@ -3,6 +3,7 @@
 #### Discussion:
 
 ##### Week 1
+Ted Underwood, Where To Start with Text Mining [http://tedunderwood.com/2012/08/14/where-to-start-with-text-mining/]
 
 Ben Merriman, A Science of Literature [http://bostonreview.net/books-ideas/ben-merriman-moretti-jockers-digital-humanities]
 
