@@ -33,6 +33,10 @@ that it's reading in correctly. This will be useful if you ever need to
 convert a variety of different types of texts to the same format - especially
 if you want to tokenize or otherwise preprocess as you do it.
 
+Problem 5: Try to read in some other complex UTF-8 text like the Urdu file and
+Tweets file from the website. What happens if you read them in with the wrong
+encoding?
+
 Extra things:
   - print the words AND their counts as a CSV (comma-separated values file).
   You can look up what this format looks like online: basically, it corresponds
