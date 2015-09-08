@@ -52,12 +52,13 @@ HISTORY & LITERATURE</h1>
 	Discussion:</br>
 	    <a href="http://tedunderwood.com/2012/08/14/where-to-start-with-text-mining/">Ted Underwood, Where to Start with Text Mining</a>
         <a href="http://instagram-engineering.tumblr.com/post/117889701472/emojineering-part-1-machine-learning-for-emoji">Thomas Dimson, Emojineering Part 1: Machine Learning for Emoji Trends</a> 
+        <br/>
+	<a href="http://norvig.com/mayzner.htm">Peter Norvig, English Letter Frequency Counts</a> 
     </td>
     <td><a href="week1/ex1.py">Ex 1: Counting Words</a><br/>
 	    <a href="week1/sonnets.txt">Sonnets file</a><br/>
 	    <a href="week1/ex2.py">Ex 2: Character Encodings</a><br/>
-	    <a href="week1/urdu50.txt">Urdu file</a>
-	    <a href="week1/tweet50.txt">Tweets file</a>
+	    <a href="week1/urdu-sample.txt">Urdu file</a>
     </td>
 </tr>
 <tr class="r0">
@@ -74,7 +75,7 @@ HISTORY & LITERATURE</h1>
 	    <a href="http://d3qi0qp55mx5f5.cloudfront.net/neubauercollegium/i/banners/8._Long:So.mp3">Talk: Hoyt Long and Richard Jean So, Form in the Machine: Tracing Imitation and Influence in the American Haiku</a> (<a href="GLNSpring2014.pdf">slides</a>)
     </td>
     <td><a href="week2/ex3.py">Ex 3: Stopwords</a>
-	    <br/><a href="week1/sonnets.txt">Shakespeare</a> <a href="week2/marlowe.txt">Marlowe</a> <a href="week2/sherlock.txt">Doyle</a>
+	    <br/><a href="week2/sonnets.txt">Shakespeare</a> <a href="week2/marlowe.txt">Marlowe</a> <a href="week2/sherlock.txt">Doyle</a>
     </td>
 </tr>
 <tr class="r0">
