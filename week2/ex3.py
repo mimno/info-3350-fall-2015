@@ -21,19 +21,14 @@ documents they show up in (right now, we're treating a line in our file as a
 single document). Switch to using document frequency to filter out words in
 the most documents. How is it different?
 
-Problem 3: Some people prefer setting a threshold for the relative frequency
-of a word to find stopwords. Look at the term frequencies and inverse document
-frequencies as ratios (i.e. count the number of total words and total lines
-and use those counts to compute what proportion of words are a given type and
-what proportion of documents contain a given word type). Is there a good
-threshold for stopwords that works universally?
-
-Problem 4: Compare the stopwords you found to the list of stopwords from
+Problem 3: Compare the stopwords you found to the list of stopwords from
 nltk.corpus.stopwords.words('english'). How do they compare? Is one "better"?
 
+Problem 4: This also saves a CSV file (comma-separated values) of word frequencies
+across the two different files under the name "authors.csv". Open this up in your
+spreadsheet viewer. How do these compare? Is there anything interesting?
+
 Extra things:
- - can you combine the term-frequency (TF) and document-frequence (IF)
- approach?
  - what happens if you get rid of least-frequent words?
  - Some people use "stemmers" to reduce the number of different word types
  with the same format to one consistent form. For instance, a Porter stemmer
@@ -66,7 +61,7 @@ def stopwords(filename):
     # This means we don't have to check whether we've used a key before when
     # we use the "+= 1" operation.
     term_frequency_dict = Counter()
-    document_frequency_dict = Counter()
+    word_total = 0
     
     tokenizer = TreebankWordTokenizer()
 
@@ -77,12 +72,9 @@ def stopwords(filename):
             # For the programmer types: there are several more efficient
             # ways to write this section using dictionaries or sets. You're
             # welcome to rewrite this part to exercise that.      
-            seen_words = []            
             for word in words:
-                if word not in seen_words:
-                    seen_words.append(word)
-                    document_frequency_dict[word] += 1
                 term_frequency_dict[word] += 1
+                word_total += 1
 
     # A fun feature of Counters is that they have a built-in function that
     # gives you the n keys with the biggest values, or the "most common"
@@ -91,12 +83,40 @@ def stopwords(filename):
     # [('foo', 10), ('bar', 7), ... , ('rare', 1)]
     stoplist_pairs = term_frequency_dict.most_common(100)
     stoplist = [word for (word, freq) in stoplist_pairs]
-    for word in stoplist:
-        del term_frequency_dict[word]
     
-    return stoplist, term_frequency_dict
+    return stoplist, term_frequency_dict, word_total
 
 
 if __name__ == '__main__':
-    path = nltk.data.find('sonnets.txt')
-    stoplist, term_frequency_dict = stopwords(path)
+    # We run our function on two different files
+    shakespath = "sonnets.txt"
+    stoplist_a, term_frequency_dict_a, total_a = stopwords(shakespath)
+    marlowepath = "marlowe.txt"
+    stoplist_b, term_frequency_dict_b, total_b = stopwords(marlowepath)
+    # This gives us the combined stoplist for the two corpora (not the
+    # smartest thing - just combining the two list into one list that
+    # may have some words twice)
+    stoplist = stoplist_a + stoplist_b
+    
+    # We want to sort our list based upon how different the relative frequencies
+    # are between the two authors, so we make a list of "diffs" where each entry
+    # has as its first element the difference between frequencies.
+    diffs = []
+    for wd, afreq in term_frequency_dict_a.iteritems():
+        if wd not in stoplist:
+            bfreq = term_frequency_dict_b.get(wd, 0)
+            diff = abs((afreq * 1.0 / total_a) - (bfreq * 1.0 / total_b))
+            diffs.append((diff, wd, afreq * 1.0 / total_a, bfreq * 1.0 / total_b))
+    # The sort() function automatically sorts a list in-place (i.e. the function
+    # returns nothing but the diffs variable changes). It does this by default based
+    # on the first element of each object, in this case the difference score.
+    diffs.sort()
+    # We want it most to least, not least to most.
+    diffs.reverse()
+
+    # We do some formatting fanciness to get this into a CSV format!
+    with open('authors.csv', 'w') as authorfile:
+        authorfile.write('Word,Shakespeare,Marlowe\n')
+        for diff, wd, afreq, bfreq in diffs:
+            authorfile.write('{0},{1},{2}\n'.format(wd, afreq, bfreq))
+       
