@@ -1,4 +1,37 @@
 """
+The goal of this assignment is to classify paragraphs of
+State of the Union addresses based on word counts to try
+to distinguish by century. The code below will train a
+Naive Bayes classifier based on word counts. It then tests
+a single paragraph to see if it can classify correctly.
+
+1. Run this code a few times. Is the category being picked
+correctly often? Is this surprising? What does it seem to break
+on?
+
+2. In line 47, we check if the word is in both vocabularies.
+Part of the reason for this is because we want to take the log
+of the word frequency, which has some problems dealing with 0s.
+If you're not familiar with logs, you can play with this function
+by running
+
+In [1]: import math
+In [2]: math.log(0.1)
+
+Try out some different numbers. Where does it break? What is
+the error? Do you know of other ways we could prevent this error
+besides what we do in line 47?
+
+3. What we'd really like to do is have this check a bunch of different
+test examples and tell us how often it succeeds. Can you replace the
+last lines of this file with a for loop that goes through all the 
+paragraphs in test_set and keeps track of how many it got right and
+wrong?
+
+4. The tokenizer we're using right now is the TreebankWordTokenizer,
+which has some cool things and some not-so-cool things. Use what we
+learned from the tokenizing exercise to change this tokenizer to
+something you think is better. Does this improve the learning rate?
 
 """
 
