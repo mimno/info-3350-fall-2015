@@ -76,8 +76,8 @@ def closest_century(sample_tokens):
         if word in pre_1900_word_counts and word in post_1900_word_counts:
             pre_score = math.log(float(pre_1900_word_counts[word]) / pre_1900_total)
             post_score = math.log(float(post_1900_word_counts[word]) / pre_1900_total)
-            print "{:.2f}\t{:.2f}\t{:.2f}\t{:.2f}\t{}".format(pre_score, post_score, pre_score - post_score, score, word)
             score += pre_score - post_score
+            print "{:.2f}\t{:.2f}\t{:.2f}\t{:.2f}\t{}".format(pre_score, post_score, pre_score - post_score, score, word)
 
     if score > 0.0:
         return "pre"
