@@ -26,6 +26,7 @@ from nltk.tokenize import TreebankWordTokenizer
 #  you to check if a symbol has been counted before.
 #  You can also add and subtract Counters.
 from collections import Counter
+from collections import defaultdict
 
 # We want to separate some of the documents as a testing
 #  set, so we need a way to create random numbers
@@ -37,9 +38,15 @@ import math
 # We also want a standard deviation function
 import numpy
 
+# Finally, we want to plot stuff
+import matplotlib.pyplot as plt
+
 # here's where we actually make a new tokenizer
 tokenizer = TreebankWordTokenizer()
 
+
+# This is how we pick how many years are in each category
+epoch_length = 25
 
 # This function returns a list of pairs of a test set and a training set.
 # This way we can try out a bunch of different testing and training splits.
@@ -63,11 +70,11 @@ def train_test_splits():
             ## the tokenizer turns a string into a list of strings
             tokens = tokenizer.tokenize(text)
             
-            # find the category
-            if int(year) < 1900:  ## why the int()?
-                doc_category = "pre"
-            else:
-                doc_category = "post"
+            # This is a little trick to make every year within an epoch
+            # into the first year of that epoch (a case where integer
+            # arithmetic comes in handy)
+            # e.g. 1777 / 25 = 71, 71 * 25 = 1775
+            doc_category = (int(year) / epoch_length) * epoch_length
 
             ## We'll use 80% of the documents as training
             ## examples, and the rest for testing
@@ -91,60 +98,103 @@ def train_test_splits():
 
 # Our function for checking which century is closer. Note that now, we need
 # to pass through the word counts from the training set we have.
-def closest_century(sample_tokens, pre_1900_word_counts, post_1900_word_counts):
-    score = 0.0
+# Our process is going to be to look at each category and compute one score
+# for it. If it is 
+def closest_century(sample_tokens, category_word_counts):
+    # Python lets us use something like infinity as a default for
+    # cases like this when we need a number lower than any possible number.
+    best_score = float("-inf")
+    # We're also using the first year (as an int) as the name of each category
+    # now, so we're using 0 as a starting best category that is recognizably
+    # not a valid response so we can tell if things broke.
+    best_category = 0
 
-    pre_1900_total = sum(pre_1900_word_counts.values())
-    post_1900_total = sum(post_1900_word_counts.values())
+    for category in category_word_counts.keys():
+        # We're finding the category sum in this loop so we only have
+        # one to track at a time.
+        total = sum(category_word_counts[category].values())
 
-    for word in sample_tokens:
-        if word in pre_1900_word_counts and word in post_1900_word_counts:
-            pre_score = math.log(float(pre_1900_word_counts[word]) / pre_1900_total)
-            post_score = math.log(float(post_1900_word_counts[word]) / post_1900_total)
-            score += pre_score - post_score
-
-    if score > 0.0:
-        return "pre"
-    else:
-        return "post"
-        
+        score = 0.0
+        for word in sample_tokens:
+            # This is one approach for dealing with words we haven't seen: 
+            # we can "smooth" the values by assuming some tiny possibility
+            # of a word appearing regardless of if we've seen it or not. In
+            # this case, we're saying that every possible word in this corpus
+            # showed up 0.1 times extra in each category. This makes the log
+            # positive and makes sure we can compare rare words that might be
+            # a really strong signal.
+            score += math.log((0.1 + float(category_word_counts[category][word])) / total)
+        # The score will be a negative number, but a *less* negative
+        # number for the most likely category.
+        if score > best_score:
+            best_score = score
+            best_category = category
         
 def train_and_test_classifier(test_set, train_set):
-    # this variable will count all the words in 18th and 19th
-    # century speeches
-    pre_1900_word_counts = Counter()
-    
-    # and this one will count the rest...
-    post_1900_word_counts = Counter()
-    
-    for doc in train_set:
-        if doc['category'] == "pre":
-            pre_1900_word_counts.update(doc['tokens'])
-        else:
-            post_1900_word_counts.update(doc['tokens'])
-    
-    # We cound how many times we classify correctly
-    successes = 0.0
-    for test_doc in test_set:
-        if closest_century(
-                test_doc['tokens'],
-                pre_1900_word_counts,
-                post_1900_word_counts) == test_doc["category"]:
-            successes += 1
+    # this variable will keep track of word counts for
+    # each period of time starting with the year we give it.
+    # A defaultdict is a generalization of a Counter for
+    # whatever default value you might have. In this case,
+    # any key we haven't used yet has a value that's an empty Counter.
+    # So, we'll end up with one counter for each category that will
+    # keep track of the token counts for that category.
+    category_word_counts = defaultdict(Counter)
 
-    # Is this line correct?
-    success_rate = successes / len(test_set)
-    return success_rate
-                
-                    
+    # This one is going to keep track of our guesses:
+    # confusion_matrix[cata][catb] will be the count of how many
+    # times the actual category was cata and our prediction was catb
+    # e.g. confusion_matrix[1825][1850] would be the count of times
+    # something in 1825-49 was guessed as being in 1850-74.
+    confusion_matrix = defaultdict(Counter)
+
+    # We add the training data to our categories
+    for doc in train_set:
+        category_word_counts[doc['category']].update(doc['tokens'])
+    
+    # We count how many times we classify correctly
+    for test_doc in test_set:
+        prediction = closest_century(test_doc['tokens'], category_word_counts)
+        confusion_matrix[test_doc["category"]][prediction] += 1
+
+    return confusion_matrix
+
 ## See http://stackoverflow.com/questions/419163/what-does-if-name-main-do
 ## for an explanation of this next line.
 if __name__ == '__main__':
-    success_rates = []                    
-    for train_set, test_set in train_test_splits():
-        success_rates.append(train_and_test_classifier(train_set, test_set))
     
-    # Compute some statistics over the trials to get our 
-    mean = numpy.average(success_rates)
-    stderr = numpy.std(success_rates) / math.sqrt(len(success_rates))
-    print "Average success rate: {0:.2f} +/- {1:.2f}".format(mean, stderr)
+    # We're going to keep track of a running confusion matrix
+    total_confusion_matrix = defaultdict(Counter)
+
+    # For each train/test split, we generate a new confusion matrix
+    # and use nice Counter addition to add in the new values to the existing
+    # ones.
+    for train_set, test_set in train_test_splits():
+        new_confusion_matrix = train_and_test_classifier(train_set, test_set)
+        for actual_cat, prediction_counter in new_confusion_matrix.items():
+            total_confusion_matrix[actual_cat] += prediction_counter
+    
+    # We now want to plot our confusion matrix. To do this, we first
+    # want to turn this from a dictionary of dictionaries to an array
+    # of arrays in order by category.
+
+    # Our list of categories in order (i.e. [1775, 1800, 1825, ..., 2000])
+    categories = sorted(total_confusion_matrix.keys())
+    confusion_matrix_array = []
+    for cat1 in categories:
+        row = [total_confusion_matrix[cat1][cat2] for cat2 in categories]
+        confusion_matrix_array.append(row)
+
+    print confusion_matrix_array
+
+    # We're going to make a figure with a confusion matrix as a
+    # plot. We want it to be square, or to have an 'equal' aspect
+    # ratio.
+    fig = plt.figure()
+    ax = fig.add_subplot(111, aspect='equal')
+    cax = ax.matshow(confusion_matrix_array)
+    fig.colorbar(cax)
+    ax.set_xticklabels(categories)
+    ax.set_yticklabels(categories)
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('Actual')
+    plt.show()
