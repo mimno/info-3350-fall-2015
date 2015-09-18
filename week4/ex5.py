@@ -99,7 +99,8 @@ def train_test_splits():
 # Our function for checking which century is closer. Note that now, we need
 # to pass through the word counts from the training set we have.
 # Our process is going to be to look at each category and compute one score
-# for it. If it is 
+# for it. If it is the best score so far, we'll pick that as the best category
+# so far. 
 def closest_century(sample_tokens, category_word_counts):
     # Python lets us use something like infinity as a default for
     # cases like this when we need a number lower than any possible number.
@@ -113,8 +114,10 @@ def closest_century(sample_tokens, category_word_counts):
         # We're finding the category sum in this loop so we only have
         # one to track at a time.
         total = sum(category_word_counts[category].values())
+        nwords = len(category_word_counts[category])
 
         score = 0.0
+
         for word in sample_tokens:
             # This is one approach for dealing with words we haven't seen: 
             # we can "smooth" the values by assuming some tiny possibility
@@ -123,12 +126,13 @@ def closest_century(sample_tokens, category_word_counts):
             # showed up 0.1 times extra in each category. This makes the log
             # positive and makes sure we can compare rare words that might be
             # a really strong signal.
-            score += math.log((0.1 + float(category_word_counts[category][word])) / total)
+            score += math.log((0.001 + float(category_word_counts[category][word])) / (total + 0.001*nwords))
         # The score will be a negative number, but a *less* negative
         # number for the most likely category.
         if score > best_score:
             best_score = score
             best_category = category
+    return best_category
         
 def train_and_test_classifier(test_set, train_set):
     # this variable will keep track of word counts for
@@ -150,7 +154,6 @@ def train_and_test_classifier(test_set, train_set):
     # We add the training data to our categories
     for doc in train_set:
         category_word_counts[doc['category']].update(doc['tokens'])
-    
     # We count how many times we classify correctly
     for test_doc in test_set:
         prediction = closest_century(test_doc['tokens'], category_word_counts)
@@ -193,8 +196,8 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111, aspect='equal')
     cax = ax.matshow(confusion_matrix_array)
     fig.colorbar(cax)
-    ax.set_xticklabels(categories)
-    ax.set_yticklabels(categories)
+    ax.set_xticklabels([''] + categories)
+    ax.set_yticklabels([''] + categories)
     ax.set_xlabel('Predicted')
     ax.set_ylabel('Actual')
     plt.show()
