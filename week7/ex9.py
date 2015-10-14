@@ -1,7 +1,23 @@
 """
 Name:
 
+Today we're working with k-means.
 
+1. Run the code. Look at the clusters you get. Compare them to your neighbors.
+Record some examples of similarities and differences between the clusters
+you got and the clusters that other people got.
+
+[ANSWER HERE]
+
+2. Right now the code is printing "0" for each iteration, because we're
+defining a variable total_distance but not updating it. Modify the code 
+so that we add up the distance from each novel to its nearest cluster.
+
+[IN CODE]
+
+3. What happens to the total_distance as you run each iteration? Why?
+
+[ANSWER HERE]
 
 """
 # Our novels are written in a tab-separated value file. We're going
@@ -104,7 +120,7 @@ def cluster_novels(novels, vocab, clusters):
         best_cluster = numpy.argmin( distances_to_clusters )
         clusters[ best_cluster ].append(novel)
 
-        total_distance += distances_to_clusters[ best_cluster ]
+        ## Update total_distance here:
 
     return total_distance
 
