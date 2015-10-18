@@ -3,6 +3,29 @@ Name:
 
 Code adapted from Joseph Wilk's semanticpy github, specifically
 https://github.com/josephwilk/semanticpy/blob/master/semanticpy/transform/lsa.py
+
+What to try:
+
+1. Try changing how many of the words we keep. How much does it change our
+similarities? How about our "topics"?
+
+2. Are the "topics" actually topics? What does this tell us about our
+new dimensions?
+
+3. Can we change which novels we consider to deal better with
+volumes of the same novel by zeroing out similarities for other
+pairs? Try changing the "if i == j" line to something relating
+to novel and othernovel.
+
+4. How low can we set the dimension before it stops producing the
+results we expect / how many dimensions do we "need"?
+
+5. In the wild, we don't use LSA on raw matrices, but instead normalize
+them based on how "important" words are, where words that show up a lot
+in a particular document and rarely otherwise are useful. There are tools
+that do this for us from document-word counts, notably the
+sklearn.feature_extraction.text.TfidfTransformer. Read the documentation
+for this and see if you can apply it to the original document-word matrix.
 """
 
 import csv
@@ -102,20 +125,62 @@ def lsa(document_word_matrix, dimension):
     lsa_document_topic = np.transpose(lsa_topic_document)
 
     # We can check that we did things right by using our new matrices
-    transformed_matrix = dot(dot(lsa_word_topic, linalg.diagsvd(lsa_singular_values, dimension, dimension)), lsa_topic_document)
+    new_singular_matrix = linalg.diagsvd(lsa_singular_values, dimension, dimension)
+    transformed_matrix = dot(dot(lsa_word_topic, new_singular_matrix), lsa_topic_document)
     
+    # We know that SVD gives us in our singular value matrix the values we care
+    # about in order.
     print "Representation error: {}".format(np.sum((document_word_matrix - transformed_matrix)**2))
 
     return lsa_word_topic, lsa_document_topic
 
 if __name__ == '__main__':
+    # We'll run LSA with a reduction to 20 dimensions. What happens if you use
+    # more?
+    dimension = 20
+    # We're also providing the option to throw away the first K words of the
+    # vocabulary, but we're starting it at 0.
+    word_offset = 0
     vocab, novels, novelmatrix = read_novels()
-    lsa_word_topic, lsa_doc_topic = lsa(novelmatrix, 50)
+    
+    lsa_word_topic, lsa_doc_topic = lsa(novelmatrix[:,word_offset:], dimension)
+    
+    # Right now, we're finding which novels are most similar based on the cosine
+    # similarity (a measure of similarity based on how big the cosine is between
+    # the two lists of numbers as vectors). We expect most novels to be most
+    # similar to the other volumes in the same set, which we can validate here
+    # by removing similarity scores for novels and themselves (which will be 1)
+    # and finding the novel most similar besides itself.
     sims = np.array([
-        [1 - cosine(novelmatrix[i], novelmatrix[j]) for j in xrange(len(novels))]
+        [1 - cosine(novelmatrix[i], novelmatrix[j]) for j in range(len(novels))]
         for i in xrange(len(novels))]
     )
-    for i, novel in enumerate(novels):
-        j = np.argmax(sims[i])
-        print novel['title'], '--', novels[j]['title']
 
+    print "Most similar novels:"
+    for i, novel in enumerate(novels):
+        for j, othernovel in enumerate(novels):
+            # We remove each novel from being in consideration for most similar
+            # to itself by zeroing out the similarity in the matrix.
+            # How could we rewrite this to remove similarities from other
+            # similarities we don't care about, like novels with almost
+            # with almost the same title or with the same author?
+            if i == j:
+                sims[i][j] = 0
+        best = np.argmax(sims[i])
+        # We print out the novel most similar for each book. Is this most-
+        # similar metric symmetric (if novel A is most similar to novel B, is B
+        # most similar to novel A)? Why or why not?
+        print '  Novel {}: {} -- {}\n             {} -- {}'.format(i, novel['author'], novel['title'], novels[best]['author'], novels[best]['title'])
+
+    # We're going to print out the top 20 words for each "topic".
+    # Do these actually look like topics?    
+    print "Words for each 'topic':"
+    lsa_topic_word = np.transpose(lsa_word_topic)
+    for dim in range(dimension):
+        best_word_indices = []        
+        for i in range(20):
+            # Find the best word, then set it to -inf
+            bestwd = np.argmax(lsa_topic_word[dim])
+            best_word_indices.append(bestwd)
+            lsa_topic_word[dim][bestwd] = float('-inf')
+        print '  Topic {}: {}'.format(dim, ' '.join([vocab[word_offset:][wd] for wd in best_word_indices]))
