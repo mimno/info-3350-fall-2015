@@ -6,34 +6,37 @@ https://github.com/josephwilk/semanticpy/blob/master/semanticpy/transform/lsa.py
 
 What to try:
 
-1. Try changing how many of the words we keep. How much does it change our
+1. Pick some words from the vocabulary. What are the most similar words?
+Do these make sense? (Try "letter" or "the")
+
+[ANSWER HERE]
+
+2. Pick a few novels, and find their most similar novels. We're printing the
+titles with their ID numbers for reference. Try 113 ("The Italian").
+
+[ANSWER HERE]
+
+3. Try changing how many of the words we keep. How much does it change our
 similarities? How about our "topics"?
 
-2. Are the "topics" actually topics? What does this tell us about our
-new dimensions?
+[ANSWER HERE]
 
-3. Can we change which novels we consider to deal better with
-volumes of the same novel by zeroing out similarities for other
-pairs? Try changing the "if i == j" line to something relating
-to novel and othernovel.
+4. Are the "topics" actually topics? What does this tell us about our
+new dimensions? Use the topic_words() function.
 
-4. How low can we set the dimension before it stops producing the
+[ANSWER HERE]
+
+5. How low can we set the dimension before it stops producing the
 results we expect / how many dimensions do we "need"?
 
-5. In the wild, we don't use LSA on raw matrices, but instead normalize
-them based on how "important" words are, where words that show up a lot
-in a particular document and rarely otherwise are useful. There are tools
-that do this for us from document-word counts, notably the
-sklearn.feature_extraction.text.TfidfTransformer. Read the documentation
-for this and see if you can apply it to the original document-word matrix.
+[ANSWER HERE]
+
 """
 
 import csv
 import numpy as np
 from scipy import dot
 from scipy import linalg
-from scipy.spatial.distance import cosine
-
 
 def read_novels():
     """Read in a file describing metadata and word counts for a number
@@ -50,6 +53,7 @@ def read_novels():
         header_line = novel_reader.next()
         vocab = header_line[3:]
         novelmatrix = []
+        line_number = 0
 
         # We read each novel into a dictionary
         for novel_data_line in novel_reader:
@@ -66,6 +70,7 @@ def read_novels():
             # We're just going to grab the metadata for each novel
             # for our list of novels
             novels.append({
+                'id': line_number,
                 'title': title,
                 'author': author,
                 'year': year,
@@ -73,10 +78,13 @@ def read_novels():
             # We'll put the actual words into a matrix, where the
             # ith row is word counts for the ith novel in novels
             novelmatrix.append(word_count_list)
+            
+            line_number += 1
 
         # We're also going to convert this to a nifty format
         # for doing math things to it
-        novelmatrix = np.array(novelmatrix)
+        novelmatrix = np.transpose(np.array(novelmatrix))
+        
         return vocab, novels, novelmatrix
 
 def lsa(document_word_matrix, dimension):
@@ -87,6 +95,9 @@ def lsa(document_word_matrix, dimension):
     # We need to know the shape of our starting document-word matrix in
     # terms of number of rows and columns in order to run LSA.
     rows, cols = document_word_matrix.shape
+
+    #for row in range(rows):
+    #    document_word_matrix[row,:] /= math.sqrt()
 
     # We can't create a matrix bigger than what we started with
     if dimension > rows:
@@ -109,6 +120,7 @@ def lsa(document_word_matrix, dimension):
     # diagonal, we just get it as a list of r singular values that would be
     # the diagonal of the matrix in order from greatest to least.
     word_topic, singular_values, topic_document = linalg.svd(document_word_matrix)
+    print singular_values
 
     # Our goal is to reduce the original dimensions of this to the number
     # of concepts or "topics" we want, which we do by discarding all of the
@@ -134,6 +146,24 @@ def lsa(document_word_matrix, dimension):
 
     return lsa_word_topic, lsa_document_topic
 
+def closest_words(query):
+    row_norms = np.sqrt(np.sum(lsa_word_topic**2, axis=1))
+    query_index = vocab.index(query)
+    query_vector = lsa_word_topic[query_index]
+    cosines = np.divide(np.dot(lsa_word_topic, query_vector), row_norms)
+    
+    return sorted(zip(cosines, vocab), reverse=True)
+    
+def closest_docs(query_index):
+    row_norms = np.sqrt(np.sum(lsa_doc_topic**2, axis=1))
+    query_vector = lsa_doc_topic[query_index]
+    cosines = np.divide(np.dot(lsa_doc_topic, query_vector), row_norms)
+    
+    return sorted(zip(cosines, [novel["title"] for novel in novels]), reverse=True)
+    
+def topic_words(col):
+    return sorted(zip(lsa_word_topic[:,col], vocab), reverse=True)
+
 if __name__ == '__main__':
     # We'll run LSA with a reduction to 20 dimensions. What happens if you use
     # more?
@@ -145,42 +175,6 @@ if __name__ == '__main__':
     
     lsa_word_topic, lsa_doc_topic = lsa(novelmatrix[:,word_offset:], dimension)
     
-    # Right now, we're finding which novels are most similar based on the cosine
-    # similarity (a measure of similarity based on how big the cosine is between
-    # the two lists of numbers as vectors). We expect most novels to be most
-    # similar to the other volumes in the same set, which we can validate here
-    # by removing similarity scores for novels and themselves (which will be 1)
-    # and finding the novel most similar besides itself.
-    sims = np.array([
-        [1 - cosine(novelmatrix[i], novelmatrix[j]) for j in range(len(novels))]
-        for i in xrange(len(novels))]
-    )
+    print [(novel["id"], novel["title"]) for novel in novels]
 
-    print "Most similar novels:"
-    for i, novel in enumerate(novels):
-        for j, othernovel in enumerate(novels):
-            # We remove each novel from being in consideration for most similar
-            # to itself by zeroing out the similarity in the matrix.
-            # How could we rewrite this to remove similarities from other
-            # similarities we don't care about, like novels with almost
-            # with almost the same title or with the same author?
-            if i == j:
-                sims[i][j] = 0
-        best = np.argmax(sims[i])
-        # We print out the novel most similar for each book. Is this most-
-        # similar metric symmetric (if novel A is most similar to novel B, is B
-        # most similar to novel A)? Why or why not?
-        print '  Novel {}: {} -- {}\n             {} -- {}'.format(i, novel['author'], novel['title'], novels[best]['author'], novels[best]['title'])
-
-    # We're going to print out the top 20 words for each "topic".
-    # Do these actually look like topics?    
-    print "Words for each 'topic':"
-    lsa_topic_word = np.transpose(lsa_word_topic)
-    for dim in range(dimension):
-        best_word_indices = []        
-        for i in range(20):
-            # Find the best word, then set it to -inf
-            bestwd = np.argmax(lsa_topic_word[dim])
-            best_word_indices.append(bestwd)
-            lsa_topic_word[dim][bestwd] = float('-inf')
-        print '  Topic {}: {}'.format(dim, ' '.join([vocab[word_offset:][wd] for wd in best_word_indices]))
+    
